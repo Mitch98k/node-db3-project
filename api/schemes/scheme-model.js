@@ -1,7 +1,15 @@
+const db = require('../../data/db-config');
+
 function find() { // EXERCISE A
+  return db('sc').count('st.step_id as number_of_steps').from('schemes as sc')
+  .leftJoin('steps as st', 'sc.scheme_id', '=', 'st.scheme_id')
+  .groupBy('sc.scheme_id').orderBy('sc.scheme_id');
   /*
     1A- Study the SQL query below running it in SQLite Studio against `data/schemes.db3`.
     What happens if we change from a LEFT join to an INNER join?
+        
+    It will only return the first six schemes, as the seventh scheme does not
+    exist on the steps table.
 
       SELECT
           sc.*,
@@ -18,6 +26,9 @@ function find() { // EXERCISE A
 }
 
 function findById(scheme_id) { // EXERCISE B
+  return db('sc').select('sc.scheme_name', 'st.*')
+  .from('schemes as sc').leftJoin('steps as st', 'sc.scheme_id', '=', 'st.scheme_id').where('sc.scheme_id', '=', scheme_id)
+  .orderBy('st.step_number');
   /*
     1B- Study the SQL query below running it in SQLite Studio against `data/schemes.db3`:
 
@@ -32,7 +43,7 @@ function findById(scheme_id) { // EXERCISE B
 
     2B- When you have a grasp on the query go ahead and build it in Knex
     making it parametric: instead of a literal `1` you should use `scheme_id`.
-
+    
     3B- Test in Postman and see that the resulting data does not look like a scheme,
     but more like an array of steps each including scheme information:
 
@@ -86,6 +97,8 @@ function findById(scheme_id) { // EXERCISE B
 }
 
 function findSteps(scheme_id) { // EXERCISE C
+  return db('st').select('st.step_id', 'st.step_number', 'st.instructions', 'sc.scheme_name')
+  .from('steps as st').join('schemes as sc', 'sc.scheme_id', '=', 'st.scheme_id').where('st.scheme_id', '=', scheme_id).orderBy('st.step_number');
   /*
     1C- Build a query in Knex that returns the following data.
     The steps should be sorted by step_number, and the array
@@ -108,13 +121,17 @@ function findSteps(scheme_id) { // EXERCISE C
   */
 }
 
-function add(scheme) { // EXERCISE D
+async function add(scheme) { // EXERCISE D
+  const [id]  = await db('schemes').insert(scheme);
+  return findById(id);
   /*
     1D- This function creates a new scheme and resolves to _the newly created scheme_.
   */
 }
 
-function addStep(scheme_id, step) { // EXERCISE E
+async function addStep(scheme_id, step) { // EXERCISE E
+  await db('steps').insert(step).where('steps.scheme_id', '=', 'schemes.scheme_id');
+  return findSteps(scheme_id);
   /*
     1E- This function adds a step to the scheme with the given `scheme_id`
     and resolves to _all the steps_ belonging to the given `scheme_id`,
